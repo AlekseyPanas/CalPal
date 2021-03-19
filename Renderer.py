@@ -7,7 +7,7 @@ class Renderer:
 
     def render(self, manager, screen, time_delta):
         # Draws background
-        screen.blit(manager.background_image, (0, 0))
+        #screen.blit(manager.background_image, (0, 0))
 
         # Renders objects
         for obj in manager.game_objects:

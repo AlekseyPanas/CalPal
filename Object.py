@@ -2,10 +2,11 @@ import random
 import pygame
 import Constants
 import Utils
+import Skeleton
 
 
 class Object:
-    def __init__(self, lifetime, z_order, image, center_pos, tags=(), physics_rect=None):
+    def __init__(self, lifetime, z_order, image, center_pos, tags=(), physics_rect=None, physics_rect_offset=(0, 0)):
         # Variables for rendering
         self.sprite_surface = image
         self.image_rect = self.sprite_surface.get_rect(center=center_pos)
@@ -13,7 +14,9 @@ class Object:
 
         # Physics Descriptors
         self.physics_rect = physics_rect if physics_rect is not None else self.image_rect
-        self.physics_rect.center = center_pos
+        self.physics_rect.center = (center_pos[0] + physics_rect_offset[0],
+                                    center_pos[1] + physics_rect_offset[1])
+        self.physics_rect_offset = physics_rect_offset
 
         # Life determination
         self.lifetime = lifetime
@@ -44,10 +47,31 @@ class Object:
         return new_image, rect
 
     def run_sprite(self, manager, time_delta):
+        self.pre_update(manager, time_delta)
+
+        # Updates the centers of the physics and image rectangles
+        self.update_rects()
+
+        self.post_update(manager, time_delta)
+
+    def update_rects(self):
+        self.physics_rect.center = (self.center[0] + self.physics_rect_offset[0],
+                                    self.center[1] + self.physics_rect_offset[1])
+        self.image_rect.center = self.center
+
+    def pre_update(self, manager, time_delta):
+        pass
+
+    def post_update(self, manager, time_delta):
         pass
 
     def render(self, surface, time_delta):
         pass
+
+
+
+
+
 
 
 class GUI(Object):
@@ -63,9 +87,26 @@ class GUI(Object):
         pass
 
 
+
+
+
+
+
 class Creature(Object):
-    def __init__(self, lifetime, z_order, image, pos, tags=()):
-        super().__init__(lifetime, z_order, image, pos, tags)
+    def __init__(self, lifetime, pos, tags=()):
+        super().__init__(lifetime, 5, Utils.load_image("assets/images/kibble.png", (50, 50)), pos, tags)
+
+        self.tags.add("creature")
+        self.skeleton = Skeleton.Skeleton((
+            Skeleton.Bone(start_node_pos=(-100, 100),
+                          end_node_pos=(100, 0)),
+            Skeleton.Bone(start_node_pos=(0, 0),
+                          end_node_pos=(150, 0)),
+        ))
+        self.skeleton.bones[0].add_connection(Skeleton.Bone.NodeTypes.END_NODE,
+                                              self.skeleton.bones[1],
+                                              Skeleton.Bone.NodeTypes.START_NODE)
+
         self.vel = (0, 0)
         self.acc = (0, 0)
         self.maxspeed = 10
@@ -132,12 +173,15 @@ class Creature(Object):
 
         self.tags.add("creature")
 
-    def run_sprite(self, manager, time_delta):
-        self.physics_rect.center = self.center
-        self.image_rect.center = self.center
+    def pre_update(self, manager, time_delta):
+        pass
+
+    def post_update(self, manager, time_delta):
+        pass
 
     def render(self, surface, time_delta):
-        pass
+        self.skeleton.render(surface, time_delta, self.center)
+        pygame.draw.circle(surface, (255, 200, 0), self.center, 5)
 
 
 
@@ -150,32 +194,46 @@ class Creature(Object):
 class Grass(Object):
     SEED2SPROUT_TIME = 3600
     SPROUT2GRASS_TIME = 15000
+    SEED2SPROUT_TIME = 100
+    SPROUT2GRASS_TIME = 200
 
     STAGES = {0: "seed", 1: "sprout", 2: "grass"}
+    STAGE2IDX = {"seed": 0, "sprout": 1, "grass": 2}
     STAGE2CAL = {STAGES[0]: 10, STAGES[1]: 100, STAGES[2]: 250}
 
-    def __init__(self, lifetime, z_order, pos, tags=()):
-        surf = pygame.Surface(Utils.cscale(100, 50))
-        surf.fill((0, 200, 0))
-        super().__init__(lifetime, z_order, surf, pos, tags)
+    def __init__(self, lifetime, pos, tags=()):
+        super().__init__(lifetime, 1, pygame.Surface(Utils.cscale(70, 45)), pos, tags)
+
+        # Grass has 3 stages of grass
+        self.sprite_surface = [Utils.load_image("assets/images/grass_0.png", Utils.cscale(70, 45)),
+                               Utils.load_image("assets/images/grass_1.png", Utils.cscale(70, 45)),
+                               Utils.load_image("assets/images/grass_2.png", Utils.cscale(70, 45))]
 
         self.tags.add("grass")
         self.tags.add("food")
 
         # Growth Stage
-        self.stage = self.STAGES[0]
+        self.stage = Grass.STAGES[0]
 
         # Universal variables for all foods
         self.calories = self.STAGE2CAL[self.stage]
         self.happiness_index = 5  # Scale that goes from 0-100, where 100 is the most enjoyable food
 
-    def run_sprite(self, manager, time_delta):
-        self.physics_rect.center = self.center
-        self.image_rect.center = self.center
+    def pre_update(self, manager, time_delta):
+        # Updates grass growth stages and calories
+        if self.exist_time >= Grass.SEED2SPROUT_TIME and self.stage == Grass.STAGES[0]:
+            self.stage = Grass.STAGES[1]
+            self.calories = self.STAGE2CAL[self.stage]
+        if self.exist_time >= Grass.SPROUT2GRASS_TIME and self.stage == Grass.STAGES[1]:
+            self.stage = Grass.STAGES[2]
+            self.calories = self.STAGE2CAL[self.stage]
+
+    def post_update(self, manager, time_delta):
+        pass
 
     def render(self, surface, time_delta):
-        surface.blit(self.sprite_surface, self.image_rect)
-        pygame.draw.rect(surface, (255, 0, 0), self.image_rect, 4)
+        surface.blit(self.sprite_surface[Grass.STAGE2IDX[self.stage]], self.image_rect)
+        pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
 
 
 
@@ -185,10 +243,8 @@ class Grass(Object):
 
 
 class Kibble(Object):
-    def __init__(self, lifetime, z_order, pos, tags=()):
-        surf = pygame.Surface(Utils.cscale(100, 85))
-        surf.fill((180, 90, 0))
-        super().__init__(lifetime, z_order, surf, pos, tags)
+    def __init__(self, lifetime, pos, tags=()):
+        super().__init__(lifetime, 2, Utils.load_image("assets/images/kibble.png", Utils.cscale(57, 30)), pos, tags)
 
         self.tags.add("kibble")
         self.tags.add("food")
@@ -197,13 +253,15 @@ class Kibble(Object):
         self.calories = 600
         self.happiness_index = 45  # Scale that goes from 0-100, where 100 is the most enjoyable food
 
-    def run_sprite(self, manager, time_delta):
-        self.physics_rect.center = self.center
-        self.image_rect.center = self.center
+    def pre_update(self, manager, time_delta):
+        pass
+
+    def post_update(self, manager, time_delta):
+        pass
 
     def render(self, surface, time_delta):
         surface.blit(self.sprite_surface, self.image_rect)
-        pygame.draw.rect(surface, (255, 0, 0), self.image_rect, 4)
+        pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
 
 
 
@@ -213,25 +271,25 @@ class Kibble(Object):
 
 
 class Snack(Object):
-    def __init__(self, lifetime, z_order, pos, tags=()):
-        surf = pygame.Surface(Utils.cscale(60, 60))
-        surf.fill((200, 0, 0))
-        super().__init__(lifetime, z_order, surf, pos, tags)
+    def __init__(self, lifetime, pos, tags=()):
+        super().__init__(lifetime, 3, Utils.load_image("assets/images/bone.png", Utils.cscale(65, 30)), pos, tags)
 
-        self.tags.add("Snack")
+        self.tags.add("snack")
         self.tags.add("food")
 
         # Universal variables for all foods
         self.calories = 600
         self.happiness_index = 100  # Scale that goes from 0-100, where 100 is the most enjoyable food
 
-    def run_sprite(self, manager, time_delta):
-        self.physics_rect.center = self.center
-        self.image_rect.center = self.center
+    def pre_update(self, manager, time_delta):
+        pass
+
+    def post_update(self, manager, time_delta):
+        pass
 
     def render(self, surface, time_delta):
         surface.blit(self.sprite_surface, self.image_rect)
-        pygame.draw.rect(surface, (255, 0, 0), self.image_rect, 4)
+        pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
 
 
 
@@ -241,40 +299,54 @@ class Snack(Object):
 
 
 class Shack(Object):
-    def __init__(self, lifetime, z_order, pos, tags=()):
-        surf = pygame.Surface(Utils.cscale(180, 280))
-        surf.fill((150, 150, 0))
-        super().__init__(lifetime, z_order, surf, pos, tags)
+    def __init__(self, lifetime, pos, tags=()):
+        super().__init__(lifetime, 0, Utils.load_image("assets/images/shack.png", Utils.cscale(250, 250)), pos, tags)
 
         self.tags.add("shack")
         self.is_collidable = True
 
-    def run_sprite(self, manager, time_delta):
-        self.physics_rect.center = self.center
-        self.image_rect.center = self.center
+    def pre_update(self, manager, time_delta):
+        pass
+
+    def post_update(self, manager, time_delta):
+        pass
 
     def render(self, surface, time_delta):
         surface.blit(self.sprite_surface, self.image_rect)
-        pygame.draw.rect(surface, (255, 0, 0), self.image_rect, 4)
+        pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
 
 
 
 
 
 class Pond(Object):
-    def __init__(self, lifetime, z_order, pos, tags=()):
+    ANIMATION_SPEED = 50
+
+    def __init__(self, lifetime, pos, tags=()):
         surf = pygame.Surface(Utils.cscale(200, 150))
         surf.fill((20, 130, 200))
-        super().__init__(lifetime, z_order, surf, pos, tags)
+        super().__init__(lifetime, -1, Utils.load_image("assets/images/pond.png", Utils.cscale(260, 150)), pos, tags)
+
+        self.ripple_images = [Utils.load_image("assets/images/ripples_1.png", Utils.cscale(260, 150)),
+                              Utils.load_image("assets/images/ripples_2.png", Utils.cscale(260, 150))]
+        self.ripple_idx = 0
 
         self.tags.add("pond")
         self.is_collidable = True
 
-    def run_sprite(self, manager, time_delta):
-        self.physics_rect.center = self.center
-        self.image_rect.center = self.center
+    def pre_update(self, manager, time_delta):
+        pass
+
+    def post_update(self, manager, time_delta):
+        pass
 
     def render(self, surface, time_delta):
         surface.blit(self.sprite_surface, self.image_rect)
-        pygame.draw.rect(surface, (255, 0, 0), self.image_rect, 4)
+        surface.blit(self.ripple_images[self.ripple_idx], self.image_rect)
+
+        # Runs animation
+        if self.exist_time % Pond.ANIMATION_SPEED == 0:
+            self.ripple_idx = 0 if self.ripple_idx == 1 else 1
+
+        pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
 

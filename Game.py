@@ -13,19 +13,18 @@ class Manager:
         self.running = True
 
         # All the game objects
-        self.background_image = pygame.Surface(Constants.SCREEN_SIZE)
-        self.background_image.fill((150, 150, 150))
+        self.background_image = Utils.load_image("assets/images/background.png", Utils.cscale(850, 700))
         self.game_objects = []
         self.game_object_add_queue = []
         self.game_object_delete_queue = []
 
         # Adds starting objects
         self.add_object(Object.GUI(None, 999, [i/2 for i in Constants.SCREEN_SIZE]))
-        self.add_object(Object.Shack(None, 5, (760, 140)))
-        self.add_object(Object.Pond(None, 5, (450, 520)))
-        self.add_object(Object.Grass(None, 1, (200, 200)))
-        self.add_object(Object.Snack(None, 2, (300, 400)))
-        self.add_object(Object.Kibble(None, 3, (250, 250)))
+        self.add_object(Object.Shack(None, (725, 125)))
+        self.add_object(Object.Pond(None, (450, 520)))
+        self.add_object(Object.Grass(None, (200, 200)))
+        self.add_object(Object.Snack(None, (300, 400)))
+        self.add_object(Object.Creature(None, (450, 250)))
         self.update_objects()
 
         # Game events
@@ -112,10 +111,3 @@ class Manager:
 
             # fps max 60
             self.clock.tick(120)
-
-    @staticmethod
-    def load_image(path, size=None):
-        img = pygame.image.load(path)
-        if size is not None:
-            img = pygame.transform.smoothscale(img, size)
-        return img.convert_alpha()
