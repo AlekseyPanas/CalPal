@@ -1,5 +1,4 @@
 import random
-
 import pygame
 import Constants
 import Utils
@@ -22,6 +21,9 @@ class Object:
 
         # Render this object?
         self.do_render = True
+
+        # Is this object solid (can it be walked through)
+        self.is_collidable = False
 
         # Draw order
         self.z_order = z_order
@@ -138,6 +140,13 @@ class Creature(Object):
         pass
 
 
+
+
+
+
+
+
+
 class Grass(Object):
     SEED2SPROUT_TIME = 3600
     SPROUT2GRASS_TIME = 15000
@@ -166,6 +175,13 @@ class Grass(Object):
 
     def render(self, surface, time_delta):
         surface.blit(self.sprite_surface, self.image_rect)
+        pygame.draw.rect(surface, (255, 0, 0), self.image_rect, 4)
+
+
+
+
+
+
 
 
 class Kibble(Object):
@@ -187,6 +203,13 @@ class Kibble(Object):
 
     def render(self, surface, time_delta):
         surface.blit(self.sprite_surface, self.image_rect)
+        pygame.draw.rect(surface, (255, 0, 0), self.image_rect, 4)
+
+
+
+
+
+
 
 
 class Snack(Object):
@@ -208,3 +231,50 @@ class Snack(Object):
 
     def render(self, surface, time_delta):
         surface.blit(self.sprite_surface, self.image_rect)
+        pygame.draw.rect(surface, (255, 0, 0), self.image_rect, 4)
+
+
+
+
+
+
+
+
+class Shack(Object):
+    def __init__(self, lifetime, z_order, pos, tags=()):
+        surf = pygame.Surface(Utils.cscale(180, 280))
+        surf.fill((150, 150, 0))
+        super().__init__(lifetime, z_order, surf, pos, tags)
+
+        self.tags.add("shack")
+        self.is_collidable = True
+
+    def run_sprite(self, manager, time_delta):
+        self.physics_rect.center = self.center
+        self.image_rect.center = self.center
+
+    def render(self, surface, time_delta):
+        surface.blit(self.sprite_surface, self.image_rect)
+        pygame.draw.rect(surface, (255, 0, 0), self.image_rect, 4)
+
+
+
+
+
+class Pond(Object):
+    def __init__(self, lifetime, z_order, pos, tags=()):
+        surf = pygame.Surface(Utils.cscale(200, 150))
+        surf.fill((20, 130, 200))
+        super().__init__(lifetime, z_order, surf, pos, tags)
+
+        self.tags.add("pond")
+        self.is_collidable = True
+
+    def run_sprite(self, manager, time_delta):
+        self.physics_rect.center = self.center
+        self.image_rect.center = self.center
+
+    def render(self, surface, time_delta):
+        surface.blit(self.sprite_surface, self.image_rect)
+        pygame.draw.rect(surface, (255, 0, 0), self.image_rect, 4)
+

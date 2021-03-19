@@ -21,6 +21,8 @@ class Manager:
 
         # Adds starting objects
         self.add_object(Object.GUI(None, 999, [i/2 for i in Constants.SCREEN_SIZE]))
+        self.add_object(Object.Shack(None, 5, (760, 140)))
+        self.add_object(Object.Pond(None, 5, (450, 520)))
         self.add_object(Object.Grass(None, 1, (200, 200)))
         self.add_object(Object.Snack(None, 2, (300, 400)))
         self.add_object(Object.Kibble(None, 3, (250, 250)))
