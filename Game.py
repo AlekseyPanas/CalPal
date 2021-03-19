@@ -9,7 +9,7 @@ import time
 class Manager:
     def __init__(self):
         # Screen window
-        self.screen = pygame.display.set_mode(Constants.SCREEN_SIZE)
+        self.screen = pygame.display.set_mode(Constants.SCREEN_SIZE, pygame.DOUBLEBUF)
         self.running = True
 
         # All the game objects
@@ -20,8 +20,10 @@ class Manager:
         self.game_object_delete_queue = []
 
         # Adds starting objects
-        self.add_object(Object.GUI(None, 999, pygame.Surface(Utils.cscale(600, 500)),
-                                   [i/2 for i in Constants.SCREEN_SIZE], ("gui")))
+        self.add_object(Object.GUI(None, 999, [i/2 for i in Constants.SCREEN_SIZE]))
+        self.add_object(Object.Grass(None, 1, (200, 200)))
+        self.add_object(Object.Snack(None, 2, (300, 400)))
+        self.add_object(Object.Kibble(None, 3, (250, 250)))
         self.update_objects()
 
         # Game events
@@ -55,6 +57,7 @@ class Manager:
 
         # Manage object life
         for obj in self.game_objects:
+            obj.exist_time += 1
             if obj.lifetime is not None:
                 obj.lifetime -= 1
             if (obj.lifetime is not None and obj.lifetime <= 0) or obj.kill:
