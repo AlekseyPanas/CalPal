@@ -1,8 +1,8 @@
 import random
+
 import pygame
-import Constants
+
 import Utils
-import Skeleton
 
 
 class Object:
@@ -69,11 +69,6 @@ class Object:
         pass
 
 
-
-
-
-
-
 class GUI(Object):
     def __init__(self, lifetime, z_order, pos, tags=()):
         super().__init__(lifetime, z_order, pygame.Surface(Utils.cscale(600, 500)), pos, tags)
@@ -87,12 +82,10 @@ class GUI(Object):
         pass
 
 
-
-
-
-
-
 class Creature(Object):
+    MAXSPEED = 1
+    MAXFORCE = 0.25
+
     def __init__(self, lifetime, pos, tags=()):
         super().__init__(lifetime, 5, Utils.load_image("assets/images/kibble.png", (200, 150)), pos, tags)
 
@@ -107,62 +100,55 @@ class Creature(Object):
                                               self.skeleton.bones[1],
                                               Skeleton.Bone.NodeTypes.START_NODE)
         """
-        self.vel = (0, 0)
-        self.acc = (0, 0)
-        self.maxspeed = 10
-        self.maxforce = 1
+        self.pos = self.center
+        self.vel = [0, 0]
+        self.acc = [0, 0]
         self.happiness = 100
         self.hunger = 100
         self.thirst = 100
+        self.moving = False
+        self.food = None
 
-    def update(self):
-        if self.hunger <= 0 or self.thirst <= 0:
-            # Die
-            return
-        if self.hunger / self.thirst > 2 or self.hunger <= random.randint(25, 75):
-            # look for food
-            food_list = []
-            self.go_to(random.choice(food_list))
-            return
-        if self.thirst / self.hunger > 2 or self.thirst <= random.randint(25, 75):
-            # look for pond
-            pond = None
-            self.go_to(pond)
-            return
-
-    def go_to(self, target):
+    def go_to(self, manager, target, time_delta):
         self.applyForce(self.seek(target))
-        obstacles = []
+        obstacles = [obj for obj in manager.game_objects if obj.is_collidable]
+        if "pond" in self.food.tags:
+            obstacles = [obj for obj in obstacles if "pond" not in self.food.tags]
         for obstacle in obstacles:
-            self.applyForce(self.avoid(obstacle))
-        self.vel[0] += self.acc[0]
-        self.vel[1] += self.acc[1]
-        self.pos[0] += self.vel[0]
-        self.pos[1] += self.vel[1]
+            self.applyForce(self.avoid(obstacle.center))
+        self.vel[0] += self.acc[0] * time_delta * 100
+        self.vel[1] += self.acc[1] * time_delta * 100
+        self.pos[0] += self.vel[0] * time_delta * 100
+        self.pos[1] += self.vel[1] * time_delta * 100
         self.acc = [0, 0]
 
     def seek(self, target):
         desired = (target[0] - self.pos[0], target[1] - self.pos[1])
         dist = (desired[0] ** 2 + desired[1] ** 2) ** (1 / 2)
-        speed = self.maxspeed
+        speed = Creature.MAXSPEED
         if dist < 100:
-            speed = dist / 10
+            speed = dist / 100
         desired = (desired[0] * speed / dist, desired[1] * speed / dist)
         steer = (desired[0] - self.vel[0], desired[1] - self.vel[1])
         mag = (steer[0] ** 2 + steer[1] ** 2) ** (1 / 2)
-        if mag > self.maxforce:
-            steer = (steer[0] * self.maxforce / mag, desired[1] * self.maxforce / mag)
-        return steer
+        if mag > Creature.MAXFORCE:
+            steer = (steer[0] * Creature.MAXFORCE / mag, desired[1] * Creature.MAXFORCE / mag)
+        if dist < 10:
+            self.moving = False
+            self.vel = [0, 0]
+            return 0, 0
+        else:
+            return steer
 
     def avoid(self, obstacle):
         desired = (obstacle[0] - self.pos[0], obstacle[1] - self.pos[1])
         dist = (desired[0] ** 2 + desired[1] ** 2) ** (1 / 2)
-        if dist < 50:
-            desired = (-desired[0] * self.maxspeed / dist, -desired[1] * self.maxspeed / dist)
+        if dist < 200:
+            desired = (-desired[0] * Creature.MAXSPEED / dist, -desired[1] * Creature.MAXSPEED / dist)
             steer = (desired[0] - self.vel[0], desired[1] - self.vel[1])
-            mag = (steer[0] ** 2 + steer[1] ** 2) ** (1 / 2)
-            if mag > self.maxforce:
-                steer = (steer[0] * self.maxforce / mag, desired[1] * self.maxforce / mag)
+            # mag = (steer[0] ** 2 + steer[1] ** 2) ** (1 / 2)
+            # if mag > Creature.MAXFORCE:
+            #     steer = (steer[0] * 2 * Creature.MAXFORCE / mag, desired[1] * 2 * Creature.MAXFORCE / mag)
             return steer
         else:
             return 0, 0
@@ -174,23 +160,46 @@ class Creature(Object):
         self.tags.add("creature")
 
     def pre_update(self, manager, time_delta):
-        pass
+        if not self.moving:
+            if random.randint(0, 1) == 0:
+                self.hunger -= time_delta * random.randint(1, 10)
+            else:
+                self.thirst -= time_delta * random.randint(1, 10)
+        print(self.hunger, self.thirst)
+        if self.hunger <= 0 or self.thirst <= 0:
+            # Die
+            return
+        if self.moving:
+            self.go_to(manager, self.food.center, time_delta)
+        else:
+            if self.food is not None:
+                if "pond" in self.food.tags:
+                    self.update_thirst(100)
+                else:
+                    self.update_hunger(self.food.calories)
+                    self.food.kill = True
+                    self.food = None
+            if self.thirst / self.hunger > 2 or self.hunger <= random.randint(25, 50):
+                self.food = random.choice([obj for obj in manager.game_objects if "food" in obj.tags])
+                self.moving = True
+            if self.hunger / self.thirst > 2 or self.thirst <= random.randint(25, 50):
+                self.food = [obj for obj in manager.game_objects if "pond" in obj.tags][0]
+                self.moving = True
 
     def post_update(self, manager, time_delta):
         pass
 
     def render(self, surface, time_delta):
-        #self.skeleton.render(surface, time_delta, self.center)
-        #pygame.draw.circle(surface, (255, 200, 0), self.center, 5)
+        # self.skeleton.render(surface, time_delta, self.center)
+        # pygame.draw.circle(surface, (255, 200, 0), self.center, 5)
 
         pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
 
+    def update_hunger(self, hunger):
+        self.hunger = min(max(self.hunger + hunger ** (1 / 2), 0), 100)
 
-
-
-
-
-
+    def update_thirst(self, thirst):
+        self.thirst = min(max(self.thirst + thirst ** (1 / 2), 0), 100)
 
 
 class Grass(Object):
@@ -238,12 +247,6 @@ class Grass(Object):
         pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
 
 
-
-
-
-
-
-
 class Kibble(Object):
     def __init__(self, lifetime, pos, tags=()):
         super().__init__(lifetime, 2, Utils.load_image("assets/images/kibble.png", Utils.cscale(57, 30)), pos, tags)
@@ -264,12 +267,6 @@ class Kibble(Object):
     def render(self, surface, time_delta):
         surface.blit(self.sprite_surface, self.image_rect)
         pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
-
-
-
-
-
-
 
 
 class Snack(Object):
@@ -294,12 +291,6 @@ class Snack(Object):
         pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
 
 
-
-
-
-
-
-
 class Shack(Object):
     def __init__(self, lifetime, pos, tags=()):
         super().__init__(lifetime, 0, Utils.load_image("assets/images/shack.png", Utils.cscale(250, 250)), pos, tags)
@@ -316,9 +307,6 @@ class Shack(Object):
     def render(self, surface, time_delta):
         surface.blit(self.sprite_surface, self.image_rect)
         pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
-
-
-
 
 
 class Pond(Object):
@@ -351,4 +339,3 @@ class Pond(Object):
             self.ripple_idx = 0 if self.ripple_idx == 1 else 1
 
         pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
-
