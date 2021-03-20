@@ -3,6 +3,7 @@ import random
 import pygame
 
 import Utils
+pygame.font.init()
 
 
 class Object:
@@ -69,17 +70,47 @@ class Object:
         pass
 
 
+
+
+
+
+
+
+
 class GUI(Object):
     def __init__(self, lifetime, z_order, pos, tags=()):
         super().__init__(lifetime, z_order, pygame.Surface(Utils.cscale(600, 500)), pos, tags)
 
         self.tags.add("gui")
 
-    def run_sprite(self, manager, time_delta):
-        pass
+        self.calories = 2000
+
+        self.font = pygame.font.SysFont("Arial", Utils.cscale(30))
+
+    def pre_update(self, manager, time_delta):
+        for event in manager.events:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_1 and self.calories >= 100:
+                    manager.add_object(Grass(None, pygame.mouse.get_pos()))
+                    self.calories -= 100
+                elif event.key == pygame.K_2 and self.calories >= 200:
+                    manager.add_object(Kibble(None, pygame.mouse.get_pos()))
+                    self.calories -= 200
+                elif event.key == pygame.K_3 and self.calories >= 300:
+                    manager.add_object(Snack(None, pygame.mouse.get_pos()))
+                    self.calories -= 300
+                if event.key == pygame.K_e and self.calories >= 10:
+                    self.calories -= 10
 
     def render(self, surface, time_delta):
-        pass
+        surface.blit(self.font.render("Calories " + str(self.calories), True, (200, 0, 0)), Utils.cscale(100, 50))
+
+
+
+
+
+
+
 
 
 class Creature(Object):
@@ -87,7 +118,7 @@ class Creature(Object):
     MAXFORCE = 0.25
 
     def __init__(self, lifetime, pos, tags=()):
-        super().__init__(lifetime, 5, Utils.load_image("assets/images/kibble.png", (200, 150)), pos, tags)
+        super().__init__(lifetime, 5, Utils.load_image("assets/images/Buster_Happy.png", (200, 150)), pos, tags)
 
         self.tags.add("creature")
         """self.skeleton = Skeleton.Skeleton((
@@ -100,6 +131,8 @@ class Creature(Object):
                                               self.skeleton.bones[1],
                                               Skeleton.Bone.NodeTypes.START_NODE)
         """
+        self.sprite_surface_right = pygame.transform.flip(self.sprite_surface, True, False).convert_alpha()
+
         self.pos = self.center
         self.vel = [0, 0]
         self.acc = [0, 0]
@@ -193,13 +226,21 @@ class Creature(Object):
         # self.skeleton.render(surface, time_delta, self.center)
         # pygame.draw.circle(surface, (255, 200, 0), self.center, 5)
 
-        pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
+        #pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
+        surface.blit(self.sprite_surface if self.vel[0] < 0 else self.sprite_surface_right, self.image_rect)
 
     def update_hunger(self, hunger):
         self.hunger = min(max(self.hunger + hunger ** (1 / 2), 0), 100)
 
     def update_thirst(self, thirst):
         self.thirst = min(max(self.thirst + thirst ** (1 / 2), 0), 100)
+
+
+
+
+
+
+
 
 
 class Grass(Object):
@@ -244,7 +285,14 @@ class Grass(Object):
 
     def render(self, surface, time_delta):
         surface.blit(self.sprite_surface[Grass.STAGE2IDX[self.stage]], self.image_rect)
-        pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
+        #pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
+
+
+
+
+
+
+
 
 
 class Kibble(Object):
@@ -266,7 +314,7 @@ class Kibble(Object):
 
     def render(self, surface, time_delta):
         surface.blit(self.sprite_surface, self.image_rect)
-        pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
+        #pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
 
 
 class Snack(Object):
@@ -288,7 +336,14 @@ class Snack(Object):
 
     def render(self, surface, time_delta):
         surface.blit(self.sprite_surface, self.image_rect)
-        pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
+        #pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
+
+
+
+
+
+
+
 
 
 class Shack(Object):
@@ -306,7 +361,13 @@ class Shack(Object):
 
     def render(self, surface, time_delta):
         surface.blit(self.sprite_surface, self.image_rect)
-        pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
+        #pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
+
+
+
+
+
+
 
 
 class Pond(Object):
@@ -338,4 +399,4 @@ class Pond(Object):
         if self.exist_time % Pond.ANIMATION_SPEED == 0:
             self.ripple_idx = 0 if self.ripple_idx == 1 else 1
 
-        pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
+        #pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)

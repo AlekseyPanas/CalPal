@@ -24,9 +24,9 @@ class Manager:
         self.add_object(Object.GUI(None, 999, [i / 2 for i in Constants.SCREEN_SIZE]))
         self.add_object(Object.Shack(None, (725, 125)))
         self.add_object(Object.Pond(None, (450, 520)))
-        self.add_object(Object.Grass(None, (200, 200)))
-        self.add_object(Object.Snack(None, (300, 400)))
-        for i in range(1, 5):
+        #self.add_object(Object.Grass(None, (200, 200)))
+        #self.add_object(Object.Snack(None, (300, 400)))
+        for i in range(2, 3):
             self.add_object(Object.Grass(None, (
                 random.randint(0, Constants.SCREEN_SIZE[0]), random.randint(0, Constants.SCREEN_SIZE[1]))))
             self.add_object(Object.Snack(None, (
