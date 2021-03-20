@@ -94,10 +94,10 @@ class GUI(Object):
 
 class Creature(Object):
     def __init__(self, lifetime, pos, tags=()):
-        super().__init__(lifetime, 5, Utils.load_image("assets/images/kibble.png", (50, 50)), pos, tags)
+        super().__init__(lifetime, 5, Utils.load_image("assets/images/kibble.png", (200, 150)), pos, tags)
 
         self.tags.add("creature")
-        self.skeleton = Skeleton.Skeleton((
+        """self.skeleton = Skeleton.Skeleton((
             Skeleton.Bone(start_node_pos=(-100, 100),
                           end_node_pos=(100, 0)),
             Skeleton.Bone(start_node_pos=(0, 0),
@@ -106,7 +106,7 @@ class Creature(Object):
         self.skeleton.bones[0].add_connection(Skeleton.Bone.NodeTypes.END_NODE,
                                               self.skeleton.bones[1],
                                               Skeleton.Bone.NodeTypes.START_NODE)
-
+        """
         self.vel = (0, 0)
         self.acc = (0, 0)
         self.maxspeed = 10
@@ -180,8 +180,10 @@ class Creature(Object):
         pass
 
     def render(self, surface, time_delta):
-        self.skeleton.render(surface, time_delta, self.center)
-        pygame.draw.circle(surface, (255, 200, 0), self.center, 5)
+        #self.skeleton.render(surface, time_delta, self.center)
+        #pygame.draw.circle(surface, (255, 200, 0), self.center, 5)
+
+        pygame.draw.rect(surface, (255, 0, 0), self.physics_rect, 1)
 
 
 
