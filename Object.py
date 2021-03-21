@@ -1,7 +1,5 @@
 import random
-
 import pygame
-
 import Utils
 pygame.font.init()
 
